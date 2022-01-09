@@ -42,9 +42,13 @@ jobs:
         name: Windows installer
         path: ${{github.workspace}}/build/*.exe
 
-  build-debian:
+  build-linux:
     runs-on: ubuntu-latest
-    container: thijswithaar/ubuntu:devel
+    strategy:
+      matrix:
+        container: ["thijswithaar/debian:sid", "thijswithaar/ubuntu:devel", "thijswithaar/arch:latest"]
+
+    container: ${{ matrix.container }}
 
     steps:
     - uses: actions/checkout@v2
@@ -58,7 +62,7 @@ jobs:
     - name: Store artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: Ubuntu package
+        name: ${{ matrix.container }} package
         path: ${{github.workspace}}/build/*.deb
 ```
 
