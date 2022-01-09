@@ -5,8 +5,8 @@ RUN powershell -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command \
     "iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))"
 RUN refreshenv
 
-RUN choco source add -n=http -s="http://community.chocolatey.org/api/v2/"
-RUN choco install --no-progress -y imagemagick.app doxygen.install cmake
+# RUN choco source add -n=http -s="http://community.chocolatey.org/api/v2/" --priority=9
+RUN choco install --no-progress -y imagemagick.app doxygen.install git cmake
 
 # Install C++ development tools
 RUN powershell -NoProfile -ExecutionPolicy Bypass -Command \
@@ -17,7 +17,7 @@ RUN "%TEMP%\vs_community.exe"  --quiet --wait --norestart --noUpdateInstaller \
     --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 \
     --add Microsoft.VisualStudio.ComponentGroup.VC.Tools.142.x86.x64 \
     --add Microsoft.VisualStudio.Component.Windows10SDK
-
+RUN del %TEMP%\* /S /Q
 RUN refreshenv
 
 # Setup Vcpkg
@@ -30,10 +30,13 @@ ENV VCPKG_REF=408ffb232c30189278a3deb30fb51622036692d5
 RUN git clone https://github.com/Microsoft/vcpkg.git %VCPKG_ROOT%
 RUN git -C %VCPKG_ROOT% checkout %VCPKG_REF%
 RUN %VCPKG_ROOT%\bootstrap-vcpkg.bat
-RUN %VCPKG_ROOT%\vcpkg.exe integrate install
 
 # Pre-compile some common libraries, keep the results in %VCPKG_CACHE%
-RUN %VCPKG_ROOT%\vcpkg.exe install boost[*] qt5-base qt5-declarative qt5-serialbus qt5-tools catch2 gtest fmt python3
-RUN rmdir /s/q %VCPKG_ROOT%\buildtrees
-RUN rmdir /s/q %VCPKG_ROOT%\downloads
-RUN rmdir /s/q %VCPKG_ROOT%\packages
+RUN %VCPKG_ROOT%\vcpkg.exe install boost[*] catch2 fmt gtest pybind11 zlib
+RUN %VCPKG_ROOT%\vcpkg.exe install qt5-base qt5-connectivity qt5-declarative qt5-serialbus qt5-tools
+RUN %VCPKG_ROOT%\vcpkg.exe install eigen3 ffmpeg libftdi libusb nlohmann-json opencl openssl pugixml
+
+# Cleanp up intermediate build files
+RUN git reset --hard %VCPKG_REF%
+RUN %VCPKG_ROOT%\bootstrap-vcpkg.bat
+RUN %VCPKG_ROOT%\vcpkg.exe integrate install
