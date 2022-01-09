@@ -25,4 +25,4 @@ jobs:
           context: Dockerfile.windows
           push: true
           labels: windows
-          tags: 2019
+          tags: 2019b
