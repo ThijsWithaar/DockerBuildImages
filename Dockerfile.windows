@@ -1,0 +1,32 @@
+FROM mcr.microsoft.com/windows/servercore:ltsc2019
+
+RUN @"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command "iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))" && SET "PATH=%PATH%;%ALLUSERSPROFILE%\chocolatey\bin"
+
+# Install C++ development tools
+# Wait for vs_installer.exe, vs_installerservice.exe or vs_installershell.exe because choco doesn't.
+RUN powershell -NoProfile -InputFormat None -Command \
+    choco install -y python --params "/InstallDir:C:\tools\python3"; \
+    choco install -y python2 --params "/InstallDir:C:\tools\python2"; \
+    choco install -y imagemagick.app; \
+    choco install -y doxygen.install; \
+    choco install -y git; \
+    choco install -y cmake --installargs 'ADD_CMAKE_TO_PATH=System'; \
+    choco install -y visualstudio2019professional \
+    Write-Host 'Waiting for Visual C++ Build Tools to install'; \
+    Wait-Process -Name vs_installer
+
+# Setup Vcpkg
+ENV VCPKG_ROOT=C:\tools\vcpkg
+ENV VCPKG_CACHE=C:\tools\vcpkg.cache
+ENV VCPKG_DEFAULT_TRIPLET=x64-windows
+ENV VCPKG_BINARY_SOURCES=clear;files,C:\tools\vcpkg.cache,readwrite
+ENV VCPKG_REF=408ffb232c30189278a3deb30fb51622036692d5
+
+RUN git clone https://github.com/Microsoft/vcpkg.git %VCPKG_ROOT%
+RUN git -C %VCPKG_ROOT% checkout %VCPKG_REF%
+RUN %VCPKG_ROOT%\bootstrap-vcpkg.bat
+RUN %VCPKG_ROOT%\vcpkg.exe integrate install
+
+# Pre-compile some common libraries, keep the results in %VCPKG_CACHE%
+RUN %VCPKG_ROOT%\vcpkg.exe install catch2 boost[*] qt5-base
+RUN rmdir /s/q %VCPKG_ROOT%\buildtrees

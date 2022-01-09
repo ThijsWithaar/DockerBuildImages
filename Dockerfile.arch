@@ -1,0 +1,35 @@
+FROM archlinux:latest
+
+RUN pacman-key --init
+RUN pacman --noconfirm -Sy archlinux-keyring
+RUN pacman --noconfirm -Syyu
+RUN pacman --noconfirm -S lsb-release lmdb rpm-org
+RUN pacman --noconfirm -S sudo base-devel git cmake ninja clang
+RUN pacman --noconfirm -S boost catch2 eigen librsvg qt5-base
+RUN pacman --noconfirm -S doxygen imagemagick
+
+# Set clang as default compiler
+ENV CC=clang
+ENV CXX=clang++
+
+# Get a cmake which can generate arch packages
+RUN git clone --depth 1 -b cpack-arch-linux https://gitlab.kitware.com/thijs.withaar/cmake.git /tmp/cmake
+RUN cmake -S/tmp/cmake -B/tmp/cmake.build -GNinja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release
+RUN cmake --build /tmp/cmake.build -- install
+RUN rm -rf /tmp/*
+
+# Enable sudoers
+RUN sed 's/# %wheel ALL=(ALL) NOPASSWD: ALL/%wheel ALL=(ALL) NOPASSWD: ALL/g' /etc/sudoers > /etc/sudoers.new
+RUN export EDITOR="cp /etc/sudoers.new"; visudo
+RUN rm /etc/sudoers.new
+
+# Match user/group of the travis CI, so volumes show up with correct rights
+RUN groupadd -g 2000 travis && useradd -g travis -u 2000 travis && echo "travis:travis" | chpasswd
+RUN mkdir -p /home/travis && chown -R travis:travis /home/travis && usermod -aG wheel travis
+
+# And one that matches the first user of a debian system
+RUN groupadd -g 1000 me && useradd -g me -u 1000 me && echo "me:me" | chpasswd
+RUN mkdir -p /home/me && chown -R me:me /home/me && usermod -aG wheel me
+
+WORKDIR /home/travis
+USER travis
