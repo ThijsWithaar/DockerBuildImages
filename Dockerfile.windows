@@ -1,6 +1,7 @@
 # escape=`
 
 FROM mcr.microsoft.com/windows/servercore:ltsc2019
+#FROM mcr.microsoft.com/dotnet/framework/sdk:4.8-windowsservercore-ltsc2019
 
 # Install Chocolatey
 RUN powershell -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command `
@@ -10,16 +11,19 @@ RUN refreshenv
 RUN choco install --no-progress -y imagemagick.app doxygen.install git
 
 # Install C++ development tools
-RUN powershell -NoProfile -ExecutionPolicy Bypass -Command `
-	Invoke-WebRequest "https://aka.ms/vs/17/release/vs_buildtools.exe" `
-	-OutFile "%TEMP%\vs.exe" -UseBasicParsing
-
 RUN "%TEMP%\vs_community.exe"  --quiet --wait --norestart --noUpdateInstaller \
     --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 \
     --add Microsoft.VisualStudio.ComponentGroup.VC.Tools.142.x86.x64 \
     --add Microsoft.VisualStudio.Component.Windows10SDK
 RUN del %TEMP%\* /S /Q
+	--installPath C:\VisualStudio `
+	--channelUri vs.chman `
+	--installChannelUri vs.chman `
 RUN refreshenv
+RUN dir "C:/VisualStudio" & exit 0
+RUN dir "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Auxiliary/Build"
+SHELL ["cmd", "/S", "/C"]
+ENTRYPOINT [ "CMD", "/k", "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Auxiliary/Build/vcvars64.bat" ]
 
 # Setup Vcpkg
 ENV VCPKG_ROOT=C:/tools/vcpkg
@@ -28,7 +32,7 @@ ENV VCPKG_DEFAULT_TRIPLET=x64-windows
 ENV VCPKG_BINARY_SOURCES=clear;files,%VCPKG_CACHE%,readwrite
 ENV VCPKG_REF=408ffb232c30189278a3deb30fb51622036692d5
 
-RUN git clone https://github.com/Microsoft/vcpkg.git %VCPKG_ROOT%
+RUN git -q clone https://github.com/Microsoft/vcpkg.git %VCPKG_ROOT%
 RUN git -C %VCPKG_ROOT% checkout %VCPKG_REF%
 RUN %VCPKG_ROOT%\bootstrap-vcpkg.bat
 
