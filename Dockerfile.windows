@@ -1,17 +1,18 @@
+# escape=`
+
 FROM mcr.microsoft.com/windows/servercore:ltsc2019
 
 # Install Chocolatey
-RUN powershell -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command \
+RUN powershell -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command `
     "iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))"
 RUN refreshenv
 
-# RUN choco source add -n=http -s="http://community.chocolatey.org/api/v2/" --priority=9
-RUN choco install --no-progress -y imagemagick.app doxygen.install git cmake
+RUN choco install --no-progress -y imagemagick.app doxygen.install
 
 # Install C++ development tools
-RUN powershell -NoProfile -ExecutionPolicy Bypass -Command \
-    Invoke-WebRequest "https://aka.ms/vs/16/release/vs_community.exe" \
-    -OutFile "%TEMP%\vs_community.exe" -UseBasicParsing
+RUN powershell -NoProfile -ExecutionPolicy Bypass -Command `
+	Invoke-WebRequest "https://aka.ms/vs/16/release/vs_community.exe" `
+	-OutFile "%TEMP%\vs_community.exe" -UseBasicParsing
 
 RUN "%TEMP%\vs_community.exe"  --quiet --wait --norestart --noUpdateInstaller \
     --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 \
@@ -21,8 +22,8 @@ RUN del %TEMP%\* /S /Q
 RUN refreshenv
 
 # Setup Vcpkg
-ENV VCPKG_ROOT=C:\tools\vcpkg
-ENV VCPKG_CACHE=C:\tools\vcpkg.cache
+ENV VCPKG_ROOT=C:/tools/vcpkg
+ENV VCPKG_CACHE=C:/tools/vcpkg.cache
 ENV VCPKG_DEFAULT_TRIPLET=x64-windows
 ENV VCPKG_BINARY_SOURCES=clear;files,%VCPKG_CACHE%,readwrite
 ENV VCPKG_REF=408ffb232c30189278a3deb30fb51622036692d5
