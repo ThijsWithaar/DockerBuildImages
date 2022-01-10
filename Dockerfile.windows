@@ -7,12 +7,12 @@ RUN powershell -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command `
     "iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))"
 RUN refreshenv
 
-RUN choco install --no-progress -y imagemagick.app doxygen.install
+RUN choco install --no-progress -y imagemagick.app doxygen.install git
 
 # Install C++ development tools
 RUN powershell -NoProfile -ExecutionPolicy Bypass -Command `
-	Invoke-WebRequest "https://aka.ms/vs/16/release/vs_community.exe" `
-	-OutFile "%TEMP%\vs_community.exe" -UseBasicParsing
+	Invoke-WebRequest "https://aka.ms/vs/17/release/vs_buildtools.exe" `
+	-OutFile "%TEMP%\vs.exe" -UseBasicParsing
 
 RUN "%TEMP%\vs_community.exe"  --quiet --wait --norestart --noUpdateInstaller \
     --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 \
