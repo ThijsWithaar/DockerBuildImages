@@ -1,0 +1,56 @@
+# escape=`
+
+FROM mcr.microsoft.com/windows/servercore:20H2-amd64
+
+# Install a package manager (Chocolatey)
+RUN powershell -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command `
+    "iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))"
+RUN refreshenv
+
+# Install C++ development tools
+RUN choco install --no-progress -y imagemagick.app doxygen.install git
+
+# Boost requires Microsoft-MPI:
+ADD https://github.com/microsoft/Microsoft-MPI/releases/download/v10.1.1/msmpisdk.msi msmpisdk.msi
+RUN msiexec.exe /i msmpisdk.msi /qn && del /q msmpisdk.msi
+ADD https://github.com/microsoft/Microsoft-MPI/releases/download/v10.1.1/msmpisetup.exe msmpisetup.exe
+RUN msmpisetup.exe -unattend -force && del /q msmpisetup.exe
+
+# Visual Studio BuildTools
+## Download link from https://docs.microsoft.com/en-us/visualstudio/install/use-command-line-parameters-to-install-visual-studio?view=vs-2022
+RUN powershell -NoProfile -ExecutionPolicy Bypass -Command `
+    Invoke-WebRequest "https://aka.ms/vs/17/release/vs_buildtools.exe" -OutFile "vs.exe" -UseBasicParsing
+
+## See the list of components at:
+# https://docs.microsoft.com/en-us/visualstudio/install/workload-component-id-vs-build-tools?view=vs-2022
+RUN (start /w vs.exe --quiet --wait --norestart --nocache `
+	--add Microsoft.VisualStudio.Workload.VCTools;includeRecommended `
+	--add Microsoft.VisualStudio.ComponentGroup.VC.Tools.142.x86.x64 `
+	--add Microsoft.Net.Component.4.8.SDK `
+	|| IF "%ERRORLEVEL%"=="3010" EXIT 0) && del /q vs.exe
+RUN del %TEMP%\* /S /Q && refreshenv
+
+# Check if install was succesfull:
+#RUN dir "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/Common7/Tools"
+
+# Setup Vcpkg
+ENV VCPKG_VISUAL_STUDIO_PATH="C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools" `
+	VCPKG_ROOT=C:/tools/vcpkg `
+	VCPKG_CACHE=C:/tools/vcpkg.cache `
+	VCPKG_DEFAULT_TRIPLET=x64-windows `
+	VCPKG_BINARY_SOURCES=clear;files,C:/tools/vcpkg.cache,readwrite `
+	VCPKG_REF=9f04533f307a8560cc1cc5c1fdee0d88d6d7d818
+
+RUN git clone https://github.com/Microsoft/vcpkg.git %VCPKG_ROOT% && `
+	git -C %VCPKG_ROOT% checkout %VCPKG_REF% && `
+	%VCPKG_ROOT%\bootstrap-vcpkg.bat -disableMetrics
+
+# Pre-compile some common libraries
+RUN %VCPKG_ROOT%\vcpkg.exe install boost[*] catch2 fmt gtest pybind11 zlib
+RUN %VCPKG_ROOT%\vcpkg.exe install qt5-base qt5-connectivity qt5-declarative qt5-serialbus qt5-tools
+RUN %VCPKG_ROOT%\vcpkg.exe install eigen3 ffmpeg libftdi libusb nlohmann-json opencl openssl pugixml
+
+# Cleanup up intermediate build files, keep the results in %VCPKG_CACHE%
+RUN git -C %VCPKG_ROOT% reset --hard %VCPKG_REF% && `
+	%VCPKG_ROOT%\bootstrap-vcpkg.bat -disableMetrics && `
+	%VCPKG_ROOT%\vcpkg.exe integrate install
