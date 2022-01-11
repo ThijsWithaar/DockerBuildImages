@@ -4,10 +4,10 @@ on: [push]
 
 env:
     DOCKER_USER: thijswithaar
-    DBUILDOPTS: "--pull --no-cache --squash"
+    DBUILDOPTS: "--squash"
 
 jobs:
-  docker_windows:
+  docker_windows_2019:
     # Qt takes ~2 hours to build
     timeout-minutes: 360
     runs-on: windows-2019
@@ -17,6 +17,6 @@ jobs:
 
       - name: Build
         run: |
+          docker build ${DBUILDOPTS} -f Dockerfile.windows_2019 -t ${{ env.DOCKER_USER }}/windows:2019 .
           docker login -u ${{ env.DOCKER_USER }} -p ${{ secrets.DOCKER_PASSWORD }}
-          docker build ${DBUILDOPTS} -f Dockerfile.windows -t ${{ env.DOCKER_USER }}/windows:2019 .
           docker image push thijswithaar/windows:2019

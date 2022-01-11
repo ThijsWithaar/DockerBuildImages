@@ -27,23 +27,26 @@ RUN (start /w vs.exe vs.exe --quiet --wait --norestart --nocache `
 RUN del %TEMP%\* /S /Q && refreshenv
 
 # Setup Vcpkg
-ENV VCPKG_VISUAL_STUDIO_PATH="C:/Program Files (x86)/Microsoft Visual Studio/2019/BuildTools"
-ENV VCPKG_ROOT=C:\tools\vcpkg
-ENV VCPKG_CACHE=C:\tools\vcpkg.cache
-ENV VCPKG_DEFAULT_TRIPLET=x64-windows
-ENV VCPKG_BINARY_SOURCES=clear;files,C:/tools/vcpkg.cache,readwrite
-ENV VCPKG_REF=9f04533f307a8560cc1cc5c1fdee0d88d6d7d818
+ENV VCPKG_VISUAL_STUDIO_PATH="C:/Program Files (x86)/Microsoft Visual Studio/2019/BuildTools" `
+	VCPKG_DEFAULT_TRIPLET=x64-windows `
+	VCPKG_ROOT=C:\tools\vcpkg `
+	VCPKG_DOCKER_CACHE=C:/tools/vcpkg.cache `
+	VCPKG_CACHE=C:/tools/vcpkg.project.cache `
+	VCPKG_BINARY_SOURCES=clear;files,C:/tools/vcpkg.cache,readwrite `
+	VCPKG_REF=9f04533f307a8560cc1cc5c1fdee0d88d6d7d818
 
 RUN git clone https://github.com/Microsoft/vcpkg.git %VCPKG_ROOT% && `
 	git -C %VCPKG_ROOT% checkout %VCPKG_REF% && `
 	%VCPKG_ROOT%\bootstrap-vcpkg.bat -disableMetrics
 
 # Pre-compile some common libraries
-RUN %VCPKG_ROOT%\vcpkg.exe install boost[*] catch2 fmt gtest pybind11 zlib
-RUN %VCPKG_ROOT%\vcpkg.exe install qt5-base qt5-connectivity qt5-declarative qt5-serialbus qt5-tools
-RUN %VCPKG_ROOT%\vcpkg.exe install eigen3 ffmpeg libftdi libusb nlohmann-json opencl openssl pugixml
+RUN %VCPKG_ROOT%\vcpkg.exe install --clean-after-build boost[*] catch2 fmt gtest pybind11 zlib
+RUN %VCPKG_ROOT%\vcpkg.exe install --clean-after-build qt5-base qt5-connectivity qt5-declarative qt5-serialbus qt5-tools
+RUN %VCPKG_ROOT%\vcpkg.exe install --clean-after-build eigen3 ffmpeg libftdi libusb nlohmann-json opencl openssl pugixml
 
-# Cleanup up intermediate build files, keep the results in %VCPKG_CACHE%
+# Cleanup up remaining build files, but keep the results in %VCPKG_DOCKER_CACHE%
 RUN git -C %VCPKG_ROOT% reset --hard %VCPKG_REF% && `
-	%VCPKG_ROOT%\bootstrap-vcpkg.bat -disableMetrics && `
-	%VCPKG_ROOT%\vcpkg.exe integrate install
+	%VCPKG_ROOT%\bootstrap-vcpkg.bat -disableMetrics
+
+# Setup a %VCPKG_CACHE% for project-specific libraries (which can be cached by the CI)
+ENV VCPKG_BINARY_SOURCES=clear;files,C:/tools/vcpkg.cache,read;files,C:/tools/vcpkg.project.cache,readwrite
