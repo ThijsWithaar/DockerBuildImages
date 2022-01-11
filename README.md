@@ -13,7 +13,7 @@ For linux, the default package manager is used.
 
 Pre-installed tools: c++ compiler, git, cmake, doxygen, ImageMagick
 
-Pre-install libraries (with headers): boost, qt, catch2
+Pre-installed libraries (with headers): boost, qt, catch2, fmt, eigen3
 
 ### Github Actions
 
@@ -24,17 +24,23 @@ env:
 
 jobs:
   build-windows:
-    runs-on: windows-latest
-    container: thijswithaar/windows
+    runs-on: windows-2019
+    container: thijswithaar/windows:2019
 
     steps:
     - uses: actions/checkout@v2
 
+    - name: Vcpkg cache
+      uses: actions/cache@v2
+      with:
+        path: ${{ env.VCPKG_CACHE }}
+        key: ${{ runner.os }}-${{ env.VCPKG_REF }}-${{ hashFiles('**/vcpkg.json') }}
+
     - name: Build
       run: |
-        cmake -G "Visual Studio 16 2019" -A x64 -T v142 -DVCPKG_TARGET_TRIPLET=%VCPKG_DEFAULT_TRIPLET% -DCMAKE_TOOLCHAIN_FILE=%VCPKG_ROOT%/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -S${{github.workspace}} -B${{github.workspace}}/build
+        cmake -G "Visual Studio 16 2019" -A x64 -T v142 -DCMAKE_TOOLCHAIN_FILE=%VCPKG_ROOT%/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -S${{github.workspace}} -B${{github.workspace}}/build
         cmake cmake --build ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} --target package
-        ctest -B ${{github.workspace}}/build -C ${{env.BUILD_TYPE}}
+        ctest -B${{github.workspace}}/build -C${{env.BUILD_TYPE}}
 
     - name: Store artifacts
       uses: actions/upload-artifact@v2
@@ -63,7 +69,9 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: ${{ matrix.container }} package
-        path: ${{github.workspace}}/build/*.deb
+        path: |
+          ${{github.workspace}}/build/*.deb
+          ${{github.workspace}}/build/*.pkg.tar.*
 ```
 
 
