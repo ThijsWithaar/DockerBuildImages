@@ -1,7 +1,17 @@
 image:
  - ubuntu2004
 
+environment:
+  DBUILDOPTS: "--pull"
+  NAMESPACE: "thijswithaar"
+
+before_build:
+  - docker login -u ${DOCKER_USER} -p ${DOCKER_PWD}
+
 build_script:
-# Linux
-- sh: docker login -u ${DOCKER_USER} -p ${DOCKER_PWD}
-- sh: ./build.sh
+  # Debian
+  - docker build ${DBUILDOPTS} -f Dockerfile.debian_sid -t ${NAMESPACE}/debian:sid .
+  - docker push ${NAMESPACE}/debian:sid
+  # Ubuntu
+  - docker build ${DBUILDOPTS} -f Dockerfile.ubuntu -t ${NAMESPACE}/ubuntu:devel .
+  - docker push ${NAMESPACE}/ubuntu:devel
