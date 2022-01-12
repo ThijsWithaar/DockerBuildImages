@@ -3,11 +3,6 @@ image:
  - ubuntu2004
 
 build_script:
-# Windows
-- cmd: docker login -u %DOCKER_USER% -p %DOCKER_PWD%
-- cmd: docker build -t windows -f .\Dockerfile.windows .
-- cmd: docker push windows
-
 # Linux
 - sh: docker login -u ${DOCKER_USER} -p ${DOCKER_PWD}
 - sh: ./build.sh

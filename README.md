@@ -4,7 +4,7 @@
 ## Introduction
 
 A set of docker files to set up C++ build environments.
-The appveyor.yml is used to generate these images.
+The appveyor.yml is used to generate the linux images, github actions for the windows build.
 
 Under windows, [Vcpkg](https://vcpkg.io) is used to get 3rd party libraries.
 The build result cache is located at `%VCPKG_CACHE%`, this can be used to reduce vcpkg build times in CI.

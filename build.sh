@@ -1,6 +1,6 @@
 #!/bin/sh
-DBUILDOPTS="--pull --no-cache --squash"
-#DBUILDOPTS="--squash"
+#DBUILDOPTS="--pull --no-cache --squash"
+DBUILDOPTS="--pull"
 NAMESPACE="thijswithaar"
 
 docker build ${DBUILDOPTS} -f Dockerfile.debian_sid -t ${NAMESPACE}/debian:sid .
