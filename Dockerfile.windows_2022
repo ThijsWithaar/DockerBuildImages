@@ -30,9 +30,10 @@ RUN powershell -NoProfile -ExecutionPolicy Bypass -Command `
 RUN (start /w vs.exe --quiet --wait --norestart --nocache `
 	--add Microsoft.VisualStudio.Workload.VCTools;includeRecommended `
 	--add Microsoft.VisualStudio.ComponentGroup.VC.Tools.142.x86.x64 `
-	--add Microsoft.Net.Component.4.8.SDK `
-	|| IF "%ERRORLEVEL%"=="3010" EXIT 0) && del /q vs.exe
-RUN del %TEMP%\* /S /Q && refreshenv
+	|| IF "%ERRORLEVEL%"=="3010" EXIT 0) && `
+	del /q vs.exe && `
+	del %TEMP%\* /S /Q && `
+	refreshenv
 
 # Check if install was succesfull:
 #RUN dir "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/Common7/Tools"
