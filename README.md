@@ -1,4 +1,5 @@
 [![Appveyor Build status](https://ci.appveyor.com/api/projects/status/gxebs0dxfl4e70ro/branch/main?svg=true)](https://ci.appveyor.com/project/ThijsWithaar/dockerbuildimages/branch/main)
+[![Gitub actions](https://github.com/ThijsWithaar/DockerBuildImages/actions/workflows/docker.yml/badge.svg)](https://github.com/ThijsWithaar/DockerBuildImages/actions)
 
 ## Introduction
 
