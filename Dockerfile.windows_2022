@@ -1,6 +1,10 @@
 # escape=`
 
-FROM mcr.microsoft.com/windows/servercore:20H2-amd64
+# Github actions provides 10.0.20348 Build 405
+# See: https://github.com/actions/virtual-environments/blob/main/images/win/Windows2022-Readme.md
+# So the closest images is ltsc2022-amd64 (10.0.20348.469)
+# See: https://hub.docker.com/_/microsoft-windows-servercore
+FROM mcr.microsoft.com/windows/servercore:ltsc2022-amd64
 
 # Install a package manager (Chocolatey)
 RUN powershell -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command `
