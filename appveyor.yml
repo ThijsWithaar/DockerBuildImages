@@ -1,5 +1,4 @@
 image:
- - Visual Studio 2019
  - ubuntu2004
 
 build_script:

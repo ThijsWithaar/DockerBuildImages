@@ -12,27 +12,21 @@ RUN apt-add-repository "deb http://apt.llvm.org/unstable/ llvm-toolchain main"
 # Install latest version of build-tools and development libraries
 RUN apt update -q
 RUN apt upgrade -y
-RUN apt install -y build-essential git cmake ninja-build clang++-10 lld-10
-RUN apt install -y imagemagick doxygen
-RUN apt install -y libflac-dev libopus-dev libsoxr-dev qtbase5-dev qttools5-dev libboost-all-dev
-RUN apt install -y libeigen3-dev doxygen locales tzdata
+RUN apt install -y build-essential git cmake ninja-build clang-14 lld-14
+RUN apt install -y imagemagick doxygen locales tzdata
+RUN apt install -y catch2 libeigen3-dev libflac-dev libopus-dev libsoxr-dev libftdi-dev \
+				   qtbase5-dev qttools5-dev libboost-all-dev
 RUN apt-get clean
 
 # Register the compiler
-RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-10 100
-RUN update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-10 100
-RUN update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-10 100
-RUN update-alternatives --install /usr/bin/lld lld /usr/bin/lld-10 100
+RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-14 140
+RUN update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-14 140
+RUN update-alternatives --install /usr/bin/lld lld /usr/bin/lld-link-14 140
+RUN update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100
 RUN update-alternatives --config clang
 RUN update-alternatives --config clang++
 RUN update-alternatives --config c++
 RUN update-alternatives --config lld
-
-# Catch2 is not yet in a repo, so build+install ourselves
-RUN git clone -b v2.x --depth=1 https://github.com/catchorg/Catch2.git /tmp/catch2
-RUN cmake -H/tmp/catch2 -B/tmp/catch2.build -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX=/usr
-RUN cmake --build /tmp/catch2.build -- install
-RUN rm -rf /tmp/catch2*
 
 # Setup locale. Qt5 linguist seems confused, maybe this is it?
 RUN echo -e "Europe/Amsterdam" > /etc/timezone

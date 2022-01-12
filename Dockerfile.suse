@@ -6,7 +6,9 @@ RUN zypper -n ar https://download.opensuse.org/repositories/devel:/libraries:/c_
 
 RUN zypper --gpg-auto-import-keys -n refresh && zypper -n dup && zypper -n update
 RUN zypper -n install --type pattern devel_basis
-RUN zypper -n install lsb-release sudo git cmake ninja llvm-clang rpmbuild
+# busybox' gzip conflicts with rpm-build's gzip dependency, so remove it:
+RUN zypper -n rm busybox
+RUN zypper -n install lsb-release sudo git cmake ninja llvm-clang rpm-build
 RUN zypper -n install libQt5Widgets-devel libQt5Network-devel libeigen Catch2-devel
 RUN zypper -n install boost-devel libboost_system-devel libboost_program_options-devel libboost_serialization-devel
 RUN zypper -n install doxygen ImageMagick librsvg
@@ -18,11 +20,11 @@ RUN rm /etc/sudoers.new
 
 # Match user/group of the travis CI, so volumes show up with correct rights
 RUN groupadd -g 2000 travis && useradd -g travis -u 2000 travis -m && echo "travis:travis" | chpasswd
-RUN usermod -aG wheel travis
+#RUN usermod -aG wheel travis
 
 # And one that matches the first user of a debian system
 RUN groupadd -g 1000 me && useradd -g me -u 1000 me -m && echo "me:me" | chpasswd
-RUN usermod -aG wheel me
+#RUN usermod -aG wheel me
 
 WORKDIR /home/travis
 USER travis
