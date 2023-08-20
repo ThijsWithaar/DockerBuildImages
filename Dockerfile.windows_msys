@@ -1,0 +1,38 @@
+ # escape=`
+
+FROM mcr.microsoft.com/windows/servercore:ltsc2019
+
+
+# Buildtools/compiler from Msys
+RUN curl -sSL -o msys2.exe https://github.com/msys2/msys2-installer/releases/download/2023-07-18/msys2-base-x86_64-20230718.sfx.exe &&`
+	msys2.exe -y -oC:\tools &&`
+	del /q msys2.exe &&`
+	setx /M path "%PATH%;C:\tools\msys64;C:\tools\msys64\usr\bin;C:\tools\msys64\mingw64\bin"
+
+RUN bash -lc "pacman --noconfirm -Syuu" &&`
+	bash -lc "pacman --noconfirm -Syu" &&`
+	bash -lc "pacman --noconfirm -Syu git cmake ninja doxygen mingw-w64-ucrt-x86_64-clang"
+#RUN bash -lc "MSYSTEM UCRT64"
+
+
+# C++ Package manager (Vcpkg)
+ENV VCPKG_DEFAULT_TRIPLET=x64-windows `
+	VCPKG_ROOT=C:/tools/vcpkg `
+	VCPKG_CACHE=C:/tools/vcpkg.cache `
+	VCPKG_BINARY_SOURCES=clear;files,C:/tools/vcpkg.cache,readwrite `
+	VCPKG_REF=c95000e1b5bb62884de08d5e952993c8bced9db6
+
+RUN git clone https://github.com/Microsoft/vcpkg.git %VCPKG_ROOT% && `
+	git -C %VCPKG_ROOT% checkout %VCPKG_REF% && `
+	%VCPKG_ROOT%\bootstrap-vcpkg.bat -disableMetrics
+
+
+# GPU development
+RUN powershell -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command `"iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))" &&`
+	refreshenv &&`
+	choco install --no-progress -y cuda opencl-intel-cpu-runtime
+
+# curl -SL -o basekit.exe https://registrationcenter-download.intel.com/akdlm/IRC_NAS/f96c71db-2c6c-45d9-8c1f-0348ef5885cf/w_BaseKit_p_2023.2.0.49396_offline.exe
+
+
+CMD ["bash", "-l"]
