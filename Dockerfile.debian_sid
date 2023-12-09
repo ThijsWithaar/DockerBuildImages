@@ -1,38 +1,50 @@
-FROM debian:sid
+FROM debian:unstable-20231120
 
 # tzdata likes to ask questions:
 ARG DEBIAN_FRONTEND=noninteractive
 
-# Add repositories
-RUN apt update -q
-RUN apt install -y apt-utils wget gnupg ca-certificates software-properties-common
-RUN wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|apt-key add -
-RUN apt-add-repository "deb http://apt.llvm.org/unstable/ llvm-toolchain main"
+# Add repositories (llvm)
+RUN apt update -q && \
+	apt install -y --no-upgrade apt-utils wget gnupg ca-certificates software-properties-common && \
+	apt-get clean && \
+	wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|apt-key add - && \
+	apt-add-repository "deb http://apt.llvm.org/unstable/ llvm-toolchain-17 main"
 
 # Install latest version of build-tools and development libraries
-RUN apt update -q
-RUN apt upgrade -y
-RUN apt install -y build-essential git cmake ninja-build clang-14 lld-14
-RUN apt install -y imagemagick doxygen locales tzdata
-RUN apt install -y catch2 libeigen3-dev libflac-dev libopus-dev libsoxr-dev libftdi-dev \
-				   qtbase5-dev qttools5-dev libboost-all-dev
-RUN apt-get clean
+RUN apt update -q && apt install -y --no-upgrade \
+		doxygen locales tzdata imagemagick \
+		build-essential git cmake ninja-build clang-17 lld-17 \
+		libboost-all-dev qtbase5-dev qttools5-dev \
+		libeigen3-dev libflac-dev libopus-dev libsoxr-dev \
+	&& apt-get clean
 
-# Register the compiler
-RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-14 140
-RUN update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-14 140
-RUN update-alternatives --install /usr/bin/lld lld /usr/bin/lld-link-14 140
-RUN update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100
-RUN update-alternatives --config clang
-RUN update-alternatives --config clang++
-RUN update-alternatives --config c++
-RUN update-alternatives --config lld
+# Set the default compiler
+RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-17 170 && \
+	update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-17 170 && \
+	update-alternatives --install /usr/bin/lld lld /usr/bin/lld-17 170 && \
+	update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100 && \
+	update-alternatives --config clang && \
+	update-alternatives --config clang++ && \
+	update-alternatives --config lld && \
+	update-alternatives --config c++
+
+# Catch2 is not yet in a repo, so build+install ourselves
+RUN git clone --depth=1 -b v3.4.0 https://github.com/catchorg/Catch2.git /tmp/catch2 && \
+	cmake -S/tmp/catch2 -B/tmp/catch2.build -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX=/usr && \
+	cmake --build /tmp/catch2.build -- install && \
+	rm -rf /tmp/catch2*
+
+# TODO: Bring in the visual studio tools in wine.
+# Then use
+# 	https://github.com/paleozogt/MSVCDocker/blob/master/Dockerfile
+# or
+# 	https://github.com/mstorsjo/msvc-wine/blob/master/Dockerfile
 
 # Setup locale. Qt5 linguist seems confused, maybe this is it?
-RUN echo -e "Europe/Amsterdam" > /etc/timezone
-RUN dpkg-reconfigure -f noninteractive tzdata
-RUN echo -e 'LANG="en_US.UTF-8"\nLANGUAGE="en_US:en"\n' > /etc/default/locale
-RUN dpkg-reconfigure -f noninteractive locales
+RUN echo -e "Europe/Amsterdam" > /etc/timezone && \
+	dpkg-reconfigure -f noninteractive tzdata && \
+	echo -e 'LANG="en_US.UTF-8"\nLANGUAGE="en_US:en"\n' > /etc/default/locale && \
+	dpkg-reconfigure -f noninteractive locales
 
 # Match user/group of the travis CI, so volumes show up with correct rights
 RUN groupadd -g 2000 travis && useradd -g travis -u 2000 travis && echo "travis:travis" | chpasswd
@@ -42,11 +54,5 @@ RUN mkdir -p /home/travis && chown -R travis:travis /home/travis && usermod -aG 
 RUN groupadd -g 1000 me && useradd -g me -u 1000 me && echo "me:me" | chpasswd
 RUN mkdir -p /home/me && chown -R me:me /home/me && usermod -aG sudo me
 
-# TODO: Bring in the visual studio tools in wine.
-# Then use
-# 	https://github.com/paleozogt/MSVCDocker/blob/master/Dockerfile
-# or
-# 	https://github.com/mstorsjo/msvc-wine/blob/master/Dockerfile
-
-WORKDIR /home/travis
-USER travis
+WORKDIR /home/me
+USER me
