@@ -4,7 +4,7 @@ FROM debian:unstable-20231120
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Add repositories (llvm)
-RUN apt update -q && \
+RUN apt update -q && apt upgrade -y && \
 	apt install -y --no-upgrade apt-utils wget gnupg ca-certificates software-properties-common && \
 	apt-get clean && \
 	wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|apt-key add - && \

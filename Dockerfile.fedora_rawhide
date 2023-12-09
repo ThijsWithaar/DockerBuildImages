@@ -1,16 +1,19 @@
 FROM fedora:rawhide
 
 # Tools, compiler and libraries
-RUN dnf install -y @development-tools redhat-lsb rpmdevtools nano git cmake ninja-build clang lld
-RUN dnf install -y ImageMagick doxygen
-RUN dnf install -y qt5-devel boost-devel
-RUN dnf install -y flac-devel opus-devel soxr-devel
+RUN dnf install -y @development-tools redhat-lsb rpmdevtools nano git cmake ninja-build clang lld \
+		qt5-qtbase-devel qt5-qttools-devel boost-devel \
+		ImageMagick \
+		flac-devel opus-devel soxr-devel && \
+	dnf clean dbcache && \
+	ln -fs /usr/bin/clang /usr/bin/cc && \
+	ln -fs /usr/bin/clang++ /usr/bin/c++
 
 # Catch2 is not yet in a repo, so build+install ourselves
-RUN git clone -b v2.x --depth=1 https://github.com/catchorg/Catch2.git /tmp/catch2
-RUN cmake -H/tmp/catch2 -B/tmp/catch2.build -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX=/usr
-RUN cmake --build /tmp/catch2.build -- install
-RUN rm -rf /tmp/catch2*
+RUN git clone --depth=1 -b v3.4.0 https://github.com/catchorg/Catch2.git /tmp/catch2 && \
+	cmake -S/tmp/catch2 -B/tmp/catch2.build -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX=/usr && \
+	cmake --build /tmp/catch2.build -- install && \
+	rm -rf /tmp/catch2*
 
 # Match user/group of the travis CI, so volumes show up with correct rights
 RUN groupadd -g 2000 travis && useradd -g travis -u 2000 travis && echo "travis:travis" | chpasswd
@@ -20,5 +23,5 @@ RUN mkdir -p /home/travis && chown -R travis:travis /home/travis && usermod -aG 
 RUN groupadd -g 1000 me && useradd -g me -u 1000 me && echo "me:me" | chpasswd
 RUN mkdir -p /home/me && chown -R me:me /home/me && usermod -aG wheel me
 
-WORKDIR /home/travis
-USER travis
+WORKDIR /home/me
+USER me
