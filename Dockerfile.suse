@@ -1,30 +1,30 @@
-FROM opensuse/tumbleweed:latest
+FROM registry.opensuse.org/opensuse/tumbleweed:20231208
 
-RUN zypper -n ar https://download.opensuse.org/repositories/science/openSUSE_Tumbleweed/science.repo
-RUN zypper -n ar https://download.opensuse.org/repositories/Education/openSUSE_Tumbleweed/Education.repo
-RUN zypper -n ar https://download.opensuse.org/repositories/devel:/libraries:/c_c++/openSUSE_Factory/devel:libraries:c_c++.repo
+RUN zypper -n ar https://download.opensuse.org/repositories/science/openSUSE_Tumbleweed/science.repo && \
+	zypper -n ar https://download.opensuse.org/repositories/Education/openSUSE_Tumbleweed/Education.repo && \
+	zypper -n ar https://download.opensuse.org/repositories/devel:/libraries:/c_c++/openSUSE_Factory/devel:libraries:c_c++.repo
 
-RUN zypper --gpg-auto-import-keys -n refresh && zypper -n dup && zypper -n update
-RUN zypper -n install --type pattern devel_basis
-# busybox' gzip conflicts with rpm-build's gzip dependency, so remove it:
-RUN zypper -n rm busybox
-RUN zypper -n install lsb-release sudo git cmake ninja llvm-clang rpm-build
-RUN zypper -n install libQt5Widgets-devel libQt5Network-devel libeigen Catch2-devel
-RUN zypper -n install boost-devel libboost_system-devel libboost_program_options-devel libboost_serialization-devel
-RUN zypper -n install doxygen ImageMagick librsvg
+RUN zypper --gpg-auto-import-keys -n refresh && zypper -n dup && zypper -n update && \
+	zypper -n install --type pattern devel_basis && \
+	zypper -n install system-group-wheel lsb-release sudo git cmake ninja llvm-clang rpm-build \
+		libQt5Widgets-devel libQt5Network-devel eigen3-devel Catch2-devel \
+		boost-devel libboost_system-devel libboost_program_options-devel libboost_serialization-devel \
+		doxygen ImageMagick librsvg && \
+	zypper cc -a
+
+# Set clang as default compiler
+ENV CC=clang
+ENV CXX=clang++
 
 # Enable sudoers
-RUN sed 's/# %wheel ALL=(ALL) NOPASSWD: ALL/%wheel ALL=(ALL) NOPASSWD: ALL/g' /etc/sudoers > /etc/sudoers.new
-RUN export EDITOR="cp /etc/sudoers.new"; visudo
-RUN rm /etc/sudoers.new
-
 # Match user/group of the travis CI, so volumes show up with correct rights
-RUN groupadd -g 2000 travis && useradd -g travis -u 2000 travis -m && echo "travis:travis" | chpasswd
-#RUN usermod -aG wheel travis
-
 # And one that matches the first user of a debian system
-RUN groupadd -g 1000 me && useradd -g me -u 1000 me -m && echo "me:me" | chpasswd
-#RUN usermod -aG wheel me
+RUN echo '#includedir /etc/sudoers.d' >> /etc/sudoers && \
+	echo 'wheel ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers.d/wheel && \
+	groupadd -g 2000 travis && useradd -g travis -u 2000 travis -m && echo "travis:travis" | chpasswd && \
+	usermod -aG wheel travis && \
+	groupadd -g 1000 me && useradd -g me -u 1000 me -m && echo "me:me" | chpasswd && \
+	usermod -aG wheel me
 
 WORKDIR /home/travis
 USER travis
