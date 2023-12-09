@@ -1,35 +1,37 @@
-FROM archlinux:latest
+FROM archlinux:base-20231112.0.191179
 
-RUN pacman-key --init
-RUN pacman --noconfirm -Sy archlinux-keyring
-RUN pacman --noconfirm -Syyu
-RUN pacman --noconfirm -S lsb-release lmdb rpm-org
-RUN pacman --noconfirm -S sudo base-devel git cmake ninja clang
-RUN pacman --noconfirm -S boost catch2 eigen librsvg qt5-base
-RUN pacman --noconfirm -S doxygen imagemagick
+RUN pacman-key --init && \
+	pacman --noconfirm -Sy archlinux-keyring && \
+	pacman --noconfirm -Syyu && \
+	pacman --noconfirm -S lsb-release lmdb rpm-org \
+		sudo base-devel git cmake ninja clang \
+		boost catch2 eigen librsvg qt5-base qt5-tools \
+		doxygen imagemagick && \
+	pacman -Scc
 
 # Set clang as default compiler
 ENV CC=clang
 ENV CXX=clang++
 
-# Get a cmake which can generate arch packages
-RUN git clone --depth 1 -b cpack-arch-linux https://gitlab.kitware.com/thijs.withaar/cmake.git /tmp/cmake
-RUN cmake -S/tmp/cmake -B/tmp/cmake.build -GNinja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release
-RUN cmake --build /tmp/cmake.build -- install
-RUN rm -rf /tmp/*
-
-# Enable sudoers
-RUN sed 's/# %wheel ALL=(ALL) NOPASSWD: ALL/%wheel ALL=(ALL) NOPASSWD: ALL/g' /etc/sudoers > /etc/sudoers.new
-RUN export EDITOR="cp /etc/sudoers.new"; visudo
-RUN rm /etc/sudoers.new
-
-# Match user/group of the travis CI, so volumes show up with correct rights
-RUN groupadd -g 2000 travis && useradd -g travis -u 2000 travis && echo "travis:travis" | chpasswd
-RUN mkdir -p /home/travis && chown -R travis:travis /home/travis && usermod -aG wheel travis
-
-# And one that matches the first user of a debian system
+# Add a non-root user
 RUN groupadd -g 1000 me && useradd -g me -u 1000 me && echo "me:me" | chpasswd
 RUN mkdir -p /home/me && chown -R me:me /home/me && usermod -aG wheel me
 
-WORKDIR /home/travis
-USER travis
+# Enable sudoers, giving paswordless sudo, for makepkg
+RUN echo 'wheel ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers && \
+	echo 'me ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+
+# Install yay, to get the AUR repositories
+USER me
+RUN git clone --depth 1 https://aur.archlinux.org/yay.git /tmp/yay && \
+	cd /tmp/yay && makepkg -si --noconfirm && \
+	rm -rf /tmp/yay
+
+# Get a cmake which can generate arch packages
+RUN git clone --depth 1 -b cpack-arch-linux https://gitlab.kitware.com/thijs.withaar/cmake.git /tmp/cmake && \
+	cmake -S/tmp/cmake -B/tmp/cmake.build -GNinja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DCMAKE_RULE_MESSAGES=OFF && \
+	sudo cmake --build /tmp/cmake.build -- install && \
+	rm -rf /tmp/cmake*
+
+# Install latest clang
+RUN yay -S --answerdiff None --answerclean None clang-git && rm -tf /home/me/.cache/yay/*
