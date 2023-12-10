@@ -15,6 +15,7 @@ env:
 
 jobs:
   windows_msys:
+    if: ${{ false }} # This hangs on pacman installation
     runs-on: windows-2019
     steps:
       - name: Checkout
@@ -40,7 +41,6 @@ jobs:
           docker image push thijswithaar/windows:2019
 
   windows_2022:
-    if: ${{ false }}
     # Qt takes ~2 hours to build
     timeout-minutes: 360
     runs-on: windows-2022
@@ -55,7 +55,6 @@ jobs:
           docker image push thijswithaar/windows:2022
 
   linux:
-    if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
