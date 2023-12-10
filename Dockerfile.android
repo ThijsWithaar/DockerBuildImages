@@ -1,0 +1,38 @@
+FROM thijswithaar/debian:sid
+
+USER root
+
+ARG NDK_VERSION=26.1.10909125
+
+RUN apt -y --no-upgrade install openjdk-22-jdk && \
+	apt-get clean && \
+	mkdir /opt/android && chmod -R 755 /opt/android
+
+ENV ANDROID_HOME=/opt/android \
+	ANDROID_SDK=/opt/android/android-sdk \
+	ANDROID_NDK=/opt/android/android-sdk/ndk/$NDK_VERSION \
+	ANDROID_NDK_HOME=/opt/android/android-sdk/ndk/$NDK_VERSION \
+	JAVA_HOME=/usr/lib/jvm/java-22-openjdk-amd64 \
+	VCPKG_ROOT=/opt/android/vcpkg \
+	PATH="${PATH}:/opt/android/android-sdk/cmdline-tools/latest/bin"
+
+# Follow the path definitions from https://developer.android.com/tools#environment-variables
+RUN wget -q https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O /opt/commandlinetools.zip && \
+	mkdir -p /opt/android/android-sdk/cmdline-tools && \
+	unzip -q /opt/commandlinetools.zip -d /opt/android/android-sdk/cmdline-tools && \
+	rm /opt/commandlinetools.zip && \
+	mv /opt/android/android-sdk/cmdline-tools/cmdline-tools /opt/android/android-sdk/cmdline-tools/latest
+
+# Choose packages from 'sdkmanager --list'
+RUN yes | sdkmanager --licenses && \
+	sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;$NDK_VERSION"
+
+# Vcpkg for android, including the host packages needed to build boost and Qt for android
+# See also: https://github.com/microsoft/vcpkg/issues/35031
+RUN apt -y install curl zip unzip tar && \
+	apt -y install linux-libc-dev '^libxcb.*-dev' libx11-xcb-dev libgl1-mesa-dev libxrender-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev && \
+	apt-get clean
+
+RUN git clone --depth=1 -b dev/Frank/35031 https://github.com/FrankXie05/vcpkg.git /opt/android/vcpkg && \
+	chmod a+w -R /opt/android/vcpkg && \
+	/opt/android/vcpkg/bootstrap-vcpkg.sh -disableMetrics

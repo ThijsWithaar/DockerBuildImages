@@ -21,6 +21,9 @@ docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 docker build ${DBUILDOPTS} --platform linux/arm32v7 --build-arg ARCH=arm32v7 -f Dockerfile.raspbian -t ${NAMESPACE}/raspbian:sid .
 docker push ${NAMESPACE}/raspbian:sid
 
+docker build ${DBUILDOPTS} -f Dockerfile.android -t ${NAMESPACE}/debian:android .
+docker push ${NAMESPACE}/debian:android
+
 # yes | docker volume prune; docker container prune --force
 # yes | docker image prune -a --filter "until=48h"
 # docker system prune -a --force

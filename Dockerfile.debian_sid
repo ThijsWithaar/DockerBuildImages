@@ -5,14 +5,14 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 # Add repositories (llvm)
 RUN apt update -q && apt upgrade -y && \
-	apt install -y --no-upgrade apt-utils wget gnupg ca-certificates software-properties-common && \
+	apt install -y --no-upgrade apt-utils ca-certificates gnupg locales software-properties-common sudo unzip wget && \
 	apt-get clean && \
 	wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|apt-key add - && \
 	apt-add-repository "deb http://apt.llvm.org/unstable/ llvm-toolchain-17 main"
 
 # Install latest version of build-tools and development libraries
 RUN apt update -q && apt install -y --no-upgrade \
-		doxygen locales tzdata imagemagick \
+		doxygen tzdata imagemagick \
 		build-essential git cmake ninja-build clang-17 lld-17 \
 		libboost-all-dev qtbase5-dev qttools5-dev \
 		libeigen3-dev libflac-dev libopus-dev libsoxr-dev \
@@ -30,7 +30,7 @@ RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-17 170 && 
 
 # Catch2 is not yet in a repo, so build+install ourselves
 RUN git clone --depth=1 -b v3.4.0 https://github.com/catchorg/Catch2.git /tmp/catch2 && \
-	cmake -S/tmp/catch2 -B/tmp/catch2.build -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX=/usr && \
+	cmake -S/tmp/catch2 -B/tmp/catch2.build -GNinja -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX=/usr && \
 	cmake --build /tmp/catch2.build -- install && \
 	rm -rf /tmp/catch2*
 
@@ -47,12 +47,12 @@ RUN echo -e "Europe/Amsterdam" > /etc/timezone && \
 	dpkg-reconfigure -f noninteractive locales
 
 # Match user/group of the travis CI, so volumes show up with correct rights
-RUN groupadd -g 2000 travis && useradd -g travis -u 2000 travis && echo "travis:travis" | chpasswd
-RUN mkdir -p /home/travis && chown -R travis:travis /home/travis && usermod -aG sudo travis
-
 # And one that matches the first user of a debian system
-RUN groupadd -g 1000 me && useradd -g me -u 1000 me && echo "me:me" | chpasswd
-RUN mkdir -p /home/me && chown -R me:me /home/me && usermod -aG sudo me
+RUN groupadd -g 2000 travis && useradd -g travis -u 2000 travis && echo "travis:travis" | chpasswd && \
+	mkdir -p /home/travis && chown -R travis:travis /home/travis && usermod -aG sudo travis && \
+	groupadd -g 1000 me && useradd -g me -u 1000 me && echo "me:me" | chpasswd && \
+	mkdir -p /home/me && chown -R me:me /home/me && usermod -aG sudo me && \
+	echo "%sudo ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 WORKDIR /home/me
 USER me
